@@ -934,3 +934,42 @@ siege -c1 -t60S -v http://borrow:8080/borrows --delay=1S
 siege 로그를 보면서 배포시 무정지로 배포된 것을 확인한다.
 
 ![image](https://github.com/user-attachments/assets/25c939f3-997b-4d65-965b-b8c0954ba99d)
+
+## configMap
+
+다음과 같은 스펙을 가지는 ConfigMap 객체를 생성
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-dev
+  namespace: default
+data:
+  BORROW_LOG_LEVEL: DEBUG
+```
+
+주문서비스 > kubernetes > deployment.yaml 파일에 configmap을 사용하는 코드를 추가한다.
+```
+          envFrom:
+            - configMapRef:
+                name: config-dev
+```
+
+
+borrow 서비스의 Logging 레벨을 Configmap의 BORROW_DEBUG_INFO 참조하도록 application.yml 파일 수정 
+```
+logging:
+  level:
+    org.hibernate.type: ${BORROW_LOG_LEVEL}
+    org.springframework.cloud: ${BORROW_LOG_LEVEL}
+```
+
+docker hub 이미지를 생성하고 Cluster에 배포 후, 컨테이너 Log를 통해 DEBUG 로그레벨이 적용되었음을 확인
+
+![image](https://github.com/user-attachments/assets/b54282e4-5ed4-4889-aad6-629b9f27e236)
+
+
+Configmap에서 각 Container로 전달된 환경정보를 확인하기 위해 아래 커맨드를 실행
+=> 배포시 전달된 BORROW_LOG_LEVEL 정보가 주문 컨테이너 OS에 설정되었음을 알 수 있다.
+
+![image](https://github.com/user-attachments/assets/b84f35ea-4eea-4da7-ab95-9978aca54a10)
