@@ -859,4 +859,49 @@ Request/Response 방식으로 구현하지 않았기 때문에 서비스가 더�
     }
 ```
 
+## HPA
+생성된 siege Pod 안쪽에서 정상작동 확인
+![image](https://github.com/user-attachments/assets/482b7145-e1a5-4a15-a492-6c90a6c794b8)
+
+
+Auto Scaler를 설정한다
+
+- 오토 스케일링 설정명령어 호출
+
+```
+kubectl autoscale deployment order --cpu-percent=50 --min=1 --max=3
+```
+
+- “cpu-percent=50 : Pod 들의 요청 대비 평균 CPU 사용율
+
+    (YAML Spec.에서 요청량이 200 milli-cores일때, 모든 Pod의 평균 CPU 사용율이 100 milli-cores(50%)를 넘게되면 HPA 발생)”
+
+
+
+![image](https://github.com/user-attachments/assets/ba5c703d-e2bc-4fa4-b011-fc6715e49aa0)
+
+
+kubectl get hpa 명령어로 설정값을 확인 한다.
+![image](https://github.com/user-attachments/assets/bf0e6c37-1d79-44bc-87dd-dad2ff06af47)
+
+배포파일에 CPU 요청에 대한 값을 지정
+현재, 배포된 주문서비스를 삭제하고 재배포한다.
+
+![image](https://github.com/user-attachments/assets/74059ea7-0266-4c27-b8a8-20983acde5ca)
+
+새로운 터미널을 열어서 seige 명령으로 부하를 주어서 Pod 가 늘어나도록 한다.
+
+```
+kubectl exec -it siege -- /bin/bash
+siege -c20 -t40S -v http://order:8080/orders 
+# siege 도구를 사용하여 order 서비스의 /orders 엔드포인트에 20명의 동시 접속자와 40초 동안 부하 테스트를 수행합니다.
+```
+
+
+
+kubectl get po -w 명령을 사용하여 pod 가 생성되는 것을 확인
+![image](https://github.com/user-attachments/assets/14f8f236-ca9d-4916-91ba-73c986d70266)
+
+kubectl get hpa 명령어로 CPU 값이 늘어난 것을 확인
+![image](https://github.com/user-attachments/assets/6d4501bd-7727-4e83-8710-b272f57717fb)
 
