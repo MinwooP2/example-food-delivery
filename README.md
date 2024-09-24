@@ -876,12 +876,11 @@ kubectl autoscale deployment order --cpu-percent=50 --min=1 --max=3
 
     (YAML Spec.에서 요청량이 200 milli-cores일때, 모든 Pod의 평균 CPU 사용율이 100 milli-cores(50%)를 넘게되면 HPA 발생)”
 
-
-
 ![image](https://github.com/user-attachments/assets/ba5c703d-e2bc-4fa4-b011-fc6715e49aa0)
 
 
 kubectl get hpa 명령어로 설정값을 확인 한다.
+
 ![image](https://github.com/user-attachments/assets/bf0e6c37-1d79-44bc-87dd-dad2ff06af47)
 
 배포파일에 CPU 요청에 대한 값을 지정
@@ -900,8 +899,38 @@ siege -c20 -t40S -v http://order:8080/orders
 
 
 kubectl get po -w 명령을 사용하여 pod 가 생성되는 것을 확인
+
 ![image](https://github.com/user-attachments/assets/14f8f236-ca9d-4916-91ba-73c986d70266)
 
 kubectl get hpa 명령어로 CPU 값이 늘어난 것을 확인
+
 ![image](https://github.com/user-attachments/assets/6d4501bd-7727-4e83-8710-b272f57717fb)
 
+
+
+## 무정지 배포 
+
+rediness probe 설정 전  배포시 정지시간이 발생
+
+![image](https://github.com/user-attachments/assets/23e0e2f0-824f-41fb-b5e7-9b7b6d1ccf95)
+
+
+readinessProbe 를 설정하고 배포 진행
+
+![image](https://github.com/user-attachments/assets/53c013ab-7e83-4fc8-a3d8-2b0144a9de09)
+
+
+siege 터미널을 열어서 충분한 시간만큼 부하를 준다.
+
+```
+kubectl exec -it siege -- /bin/bash
+siege -c1 -t60S -v http://borrow:8080/borrows --delay=1S
+```
+
+수정된 주문 서비스를 적용하여 배포한다
+
+- kubectl apply -f deployment.yaml
+
+siege 로그를 보면서 배포시 무정지로 배포된 것을 확인한다.
+
+![image](https://github.com/user-attachments/assets/25c939f3-997b-4d65-965b-b8c0954ba99d)
