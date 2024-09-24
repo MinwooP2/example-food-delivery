@@ -948,7 +948,7 @@ data:
   BORROW_LOG_LEVEL: DEBUG
 ```
 
-주문서비스 > kubernetes > deployment.yaml 파일에 configmap을 사용하는 코드를 추가한다.
+borrow > kubernetes > deployment.yaml 파일에 configmap을 사용하는 코드를 추가한다.
 ```
           envFrom:
             - configMapRef:
@@ -970,6 +970,94 @@ docker hub 이미지를 생성하고 Cluster에 배포 후, 컨테이너 Log를 
 
 
 Configmap에서 각 Container로 전달된 환경정보를 확인하기 위해 아래 커맨드를 실행
-=> 배포시 전달된 BORROW_LOG_LEVEL 정보가 주문 컨테이너 OS에 설정되었음을 알 수 있다.
+=> 배포시 전달된 BORROW_LOG_LEVEL 정보가 borrow 서비스의 컨테이너 OS에 설정되었음을 알 수 있다.
 
 ![image](https://github.com/user-attachments/assets/b84f35ea-4eea-4da7-ab95-9978aca54a10)
+
+
+### PVC
+다음과 같은 스펙을 가지는 Volume을 생성한다
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath
+spec:
+  containers:
+  - name: redis
+    image: redis
+    volumeMounts:
+    - name: somepath
+      mountPath: /data/shared
+  volumes:
+  - name : somepath
+    hostPath:
+      path: /tmp
+      type: Directory
+```
+
+컨테이너로 접속하여 마운트된 볼륨을 확인한다.
+
+![image](https://github.com/user-attachments/assets/c857d059-5edf-4c9c-a3c5-f041f33e0f5b)
+
+다음 스펙을 가지는 PVC를 생성한다.
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+  name: azurefile
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: azurefile
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+생성 확인 
+
+![image](https://github.com/user-attachments/assets/5d9cba0f-2f6e-4097-ae9e-1f36260ee764)
+
+
+NFS 볼륨을 가지는 borrow 서비스를 배포하기 위해 deploy 객체를 생성한다. 
+```
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: borrow
+  labels:
+    app: "borrow"
+spec:
+  selector:
+    matchLabels:
+      app: "borrow"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "borrow"
+    spec:
+      containers:
+      - name: "borrow"
+        image: "minwoop/borrow:2"
+        ports:
+          - containerPort: 80
+        volumeMounts:
+          - mountPath: "/mnt/data"
+            name: volume
+      volumes:
+      - name: volume
+        persistentVolumeClaim:
+          claimName: azurefile
+```
+
+배포 후 borrow 서비스의 컨테이너에 접속하여 제대로 파일시스템이 마운트되었는지 확인한다.
+
+![image](https://github.com/user-attachments/assets/a9010733-3088-4400-b4bf-1e22c9ebbea5)
+
+이후, borrow 서비스를 2개로 Scale Out하고 확장된 borrow 서비스에서도 test.txt가 확인되는지 검증한다.
+또한, 2번째 컨테이너에서도 리소스를 생성해 본다. (ReadWriteMany)
+
+![image](https://github.com/user-attachments/assets/2f300a34-4054-4d38-85f6-cfbb85acb505)
+![image](https://github.com/user-attachments/assets/ac271a81-b7ba-4c0b-9bb2-c45015620012)
